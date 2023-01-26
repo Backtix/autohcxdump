@@ -1,0 +1,24 @@
+#!/usr/bin/env bash
+
+log=/root/autohcxlab.log
+capdir=/root/$(date +'%m-%d')/caps
+iface=$(ls -1 /sys/class/net | grep ^wl)
+bpf=/root/protect.bpf
+ssidlst=/root/essid.list
+chans=13,1,6,11,2,1,6,11,3,1,6,11,4,1,6,11,5,1,6,11,7,1,6,11,8,1,6,11,9,1,6,11,10,1,6,1,12,1,6,11
+
+if ls -1 /sys/class/net | grep -q ^wl; then
+
+	echo "$(date "+%m/%d %H:%M")    Autohcxlab started" |tee -a $log
+	mkdir -p $capdir
+	cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
+	hcxlabgetmallwcpr -i $iface --onsigterm=exit --bpfc=$bpf --essidlist=$ssidlst --essidmax=30 --m2attempt=4 -c $chans
+# 	hcxlabgetm2wcpr -i $iface --onsigterm=exit --bpfc=$bpf --essidlist=$ssidlst --essidmax=30 --m2attempt=4 -c $chans
+	echo "$(date "+%m/%d %H:%M")	Autohcxlab stopped" |tee -a $log
+	ls -1sh $capdir
+
+else
+
+	echo "$(date "+%m/%d %H:%M")	Couldn't find wireless interface, terminating!" |tee -a $log
+	exit 1
+fi
