@@ -5,7 +5,7 @@
 stationary=			# leave empty
 capdir=/root/$(date +'%m-%d')/caps
 bpf=/root/0wn.bpf
-logfile=/root/autohcxlab.log
+logfile=/root/autohcxdump.log
 ssidlst=/root/standard.essidliste
 
 # ************* walking speed ****************
@@ -45,7 +45,7 @@ check_ethernet()
 trapfunc()
 {
 	[ -z $blinkpid ] || kill $blinkpid
-	echo "$(date "+%m/%d %H:%M")    autohcxlab stopped"
+	echo "$(date "+%m/%d %H:%M")    autohcxdump stopped"
 	exit 0
 }
 
@@ -53,7 +53,7 @@ trapfunc()
 [ -n "$stationary" ] || check_ethernet
 
 echo '*===========================================================================*'
-echo "$(date "+%m/%d %H:%M")    autohcxlab started"
+echo "$(date "+%m/%d %H:%M")    autohcxdump started"
 echo 'Checking Iface'
 
 # 	looping until iface is found
@@ -71,6 +71,6 @@ cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
 
 gpio blink 7 & 		# 	Pulse LED to indicate attack
 blinkpid=$!
-hcxlabtool --bpf=$bpf --watchdog=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
+hcxdumptool --bpf=$bpf --watchdog=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
 
 [ -z $blinkpid ] || kill $blinkpid
