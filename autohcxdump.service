@@ -1,0 +1,13 @@
+[Unit]
+Description=autohcxdump
+
+[Service]
+Type=simple
+ExecStart=/usr/local/bin/autohcxdump
+StandardOutput=journal
+StandardError=journal
+ExecStartPost=/usr/bin/wall -n "autohcxdump has started"
+ExecStopPost=/usr/bin/wall -n "autohcxdump has stopped"
+
+[Install]
+WantedBy=multi-user.target
