@@ -71,6 +71,6 @@ cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
 
 gpio blink 7 & 		# 	Pulse LED to indicate attack
 blinkpid=$!
-hcxdumptool --bpf=$bpf --watchdog=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
+hcxdumptool -A --bpf=$bpf --watchdogmax=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
 
 [ -z $blinkpid ] || kill $blinkpid
