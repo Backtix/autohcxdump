@@ -9,7 +9,7 @@ logfile=/root/autohcxdump.log
 ssidlst=/root/standard.essidliste
 
 # ************* walking speed ****************
-attempts='--attemptapmax=1000 --attemptclientmax=50'
+# attempts='--attemptapmax=1000 --attemptclientmax=50'
 chans='-c 1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
 staytime=
 # ********************************************
