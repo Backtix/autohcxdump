@@ -48,7 +48,7 @@ aggro()
         # chans='48b,1a,6a,11a,2a,100b,1a,6a,11a,13a,1a,6a,11a,3a,1a,48b,6a,11a,12a,1a,36b,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,48b,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a,1a,6a,100b,1a,6a,11a,1a,6a,11a,36b,1a,6a,11a'
         # chans='1a,6a,11a,2a,1a,6a,11a,13a,1a,6a,11a,3a,1a,6a,11a,12a,1a,6a,11a,4a,1a,6a,11a,10a,1a,6a,11a,5a,1a,6a,11a,9a,1a,6a,11a,7a,1a,6a,11a,8a'
         # attempts='--attemptapmax=0'
-        # attempts='--attemptapmax=6 --attemptclientmax=15' # +2 APs +5 STs
+        # attempts='--attemptapmax=2 --attemptclientmax=4'
 
         wait_iface
         systemctl stop sshd.service systemd-networkd.service systemd-resolved.service
